@@ -171,7 +171,13 @@
     .ring .value {
       stroke: var(--teal);
       stroke-linecap: round;
-      transition: stroke-dashoffset .45s ease
+      transition: stroke-dashoffset 1s cubic-bezier(.22, 1, .36, 1)
+    }
+
+    @media(prefers-reduced-motion: reduce) {
+      .ring .value {
+        transition: none
+      }
     }
 
     .ring-center {
@@ -611,10 +617,20 @@
         const elapsed = Math.max(0, Math.min(total, diffDays(start, now) + 1));
         const pct = Math.max(0, Math.min(100, elapsed / total * 100)), remain = Math.max(0, diffDays(now, end));
         const r = 34, c = 2 * Math.PI * r, offset = c * (1 - pct / 100);
+        const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+        const initialOffset = reduceMotion ? offset : c;
         this.innerHTML = `<article class="panel progress-card">
-   <div class="ring"><svg viewBox="0 0 80 80" aria-hidden="true"><circle class="track" cx="40" cy="40" r="${r}"/><circle class="value" cx="40" cy="40" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${offset}"/></svg><div class="ring-center"><span class="ring-percent">${pct.toFixed(1)}%</span><span class="ring-caption">已完成</span></div></div>
+   <div class="ring"><svg viewBox="0 0 80 80" aria-hidden="true"><circle class="track" cx="40" cy="40" r="${r}"/><circle class="value" cx="40" cy="40" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${initialOffset}"/></svg><div class="ring-center"><span class="ring-percent">${pct.toFixed(1)}%</span></div></div>
    <div class="progress-info"><div class="period-name">${name}</div><div class="period-dates">${fmt(start)} — ${fmt(end)}</div><div class="period-foot"><span>已过 <strong>${elapsed}</strong> 天</span><span>剩余 <strong>${remain}</strong> 天</span></div></div>
   </article>`;
+        if (!reduceMotion) {
+          const valueCircle = this.querySelector(".value");
+          if (valueCircle) {
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+              valueCircle.style.strokeDashoffset = String(offset);
+            }));
+          }
+        }
       }
     }
     customElements.define("progress-ring", ProgressRing);
